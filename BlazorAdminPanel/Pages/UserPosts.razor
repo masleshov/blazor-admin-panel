@@ -1,0 +1,101 @@
+﻿@using BlazorAdminPanel.Utils
+@using Radzen
+@using BlazorAdminPanel.Data
+@using BlazorAdminPanel.External.Response
+@inject UserService UserService
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);" aria-modal="true" role="dialog">
+    <div class="modal-dialog" style="max-width: 850px; width: 850px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Posts of user @UserName</h4>
+                <button type="button" class="close">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <RadzenCard>
+                    <RadzenDataList @ref="dataList" WrapItems="true" AllowPaging="true" LoadData="@LoadData" Data="@userPosts" Count="@CachedData.Count" TItem="PostPreviewResponseDto" PageSize="5" PagerHorizontalAlign="HorizontalAlign.Left">
+                        <Template Context="userPost">
+                            <RadzenCard Style="width: 100%; padding: 0; overflow: hidden;">
+                                <div class="container">
+                                    <div class="row" style="margin-left: calc(var(--bs-gutter-x) * -1); margin-right: calc(var(--bs-gutter-x) * -1)">
+                                        <div class="col-lg-3 p-3 product-title">
+                                            <RadzenImage Path="@userPost.Image" Style="width: 100%" />
+                                        </div>
+                                        <div class="col-lg-7 p-3">
+                                            <div class="row d-flex">
+                                                <div class="col-md-6 col-lg-2">
+                                                    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="mb-0">Likes:</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="mb-sm-2 mb-lg-0">@(userPost.Likes)</RadzenText>
+                                                </div>
+                                                <div class="col-md-6 col-lg-2">
+                                                    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="mb-0">Tags</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="mb-sm-2 mb-lg-0">(@string.Join(", ", @userPost.Tags))</RadzenText>
+                                                </div>
+                                                <div class="col-md-6 col-lg-5">
+                                                    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="mb-0">Text</RadzenText>
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="mb-sm-2 mb-lg-0">@userPost.Text</RadzenText>
+                                                </div>
+                                                <div class="col-md-6 order-first order-lg-last col-lg-3 text-sm-start text-lg-end mb-3 mb-lg-0">
+                                                    <RadzenBadge BadgeStyle="BadgeStyle.Secondary" Shade="Shade.Lighter" Class="price-badge" Text=@userPost.PublishDate.ToLongDateString() />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </RadzenCard>
+                        </Template>
+                    </RadzenDataList>
+                </RadzenCard>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick=@OnCloseButtonClick>Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; }
+
+    [Parameter]
+    public string UserName { get; set; }
+
+    [Parameter]
+    public UserPostsCachedData CachedData { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    private RadzenDataList<PostPreviewResponseDto> dataList;
+
+    private PostPreviewResponseDto[] userPosts;
+
+    async Task LoadData(LoadDataArgs args)
+    {
+        if (!CachedData.Data.TryGetValue(dataList.CurrentPage, out var page)
+            || page.ExpiryTime <= UnixTimeHelper.GetCurrentUnixTime())
+        {
+            CachedData.Data.Remove(dataList.CurrentPage);
+
+            var response = await UserService.GetUserPosts(UserId, args.Top.Value, dataList.CurrentPage);
+            CachedData.Count = response.Total;
+            page = new CachedPage<PostPreviewResponseDto>
+            {
+                Items = response.Data,
+                ExpiryTime = UnixTimeHelper.GetUnixTime(DateTime.Now.AddMinutes(5))
+            };
+
+            CachedData.Data.Add(dataList.CurrentPage, page);
+        }
+
+        userPosts = page.Items;
+    }
+
+    private Task OnCloseButtonClick()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+}

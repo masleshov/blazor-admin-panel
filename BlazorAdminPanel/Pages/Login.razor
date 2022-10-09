@@ -1,0 +1,56 @@
+﻿@page "/"
+@using BlazorAdminPanel.Data
+@using Radzen
+@inject LoginService LoginService;
+@inject NavigationManager NavigationManager
+
+<div class="container" style="width:400px; margin:10% auto; display: flex; flex-direction: column">
+    <RadzenText Style="margin-bottom: 10px; display: flex; justify-content: center" TextStyle="TextStyle.H5" TagName="TagName.H5" class="mb-0">Login</RadzenText>
+
+    <form>
+        <div class="form-outline mb-4">
+            <RadzenTextBox Placeholder="Enter login..." Change=@OnLoginChange Class="w-100" />
+        </div>
+        <div class="form-outline mb-4">
+            <RadzenPassword Placeholder="Enter password..." Change=@OnPasswordChange Class="w-100" />
+        </div>
+        <div style="display: flex; flex-direction: column">
+            <button type="button" class="btn btn-primary btn-block mb-4" @onclick="@OnSubmit">Sign in</button>
+            @if (failed)
+            {
+                <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Login or password wrong" />
+            }
+        </div>
+    </form>
+</div>
+
+@code {
+    private string login;
+    private string password;
+
+    private bool failed;
+
+    private void OnLoginChange(string value)
+    {
+        login = value;
+    }
+
+    private void OnPasswordChange(string value)
+    {
+        password = value;
+    }
+
+    private void OnSubmit()
+    {
+        var authenticated = LoginService.Authenticate(login, password);
+        if (authenticated)
+        {
+            failed = false;
+            NavigationManager.NavigateTo("users", true);
+        }
+        else
+        {
+            failed = true;
+        }
+    }
+}
