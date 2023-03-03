@@ -1,0 +1,126 @@
+﻿@page "/users2"
+
+@using BlazorAdminPanel.Data
+@using BlazorAdminPanel.External.Response
+@using BlazorAdminPanel.Utils
+@using Radzen
+@using Stargazer.API.Client.Infrastructure;
+
+@inject UserService UserService
+
+<PageTitle>Users</PageTitle>
+
+<div style="overflow: hidden; height: 100%; display: flex; flex-direction: column; align-items: stretch">
+
+    <div style="display: flex; justify-content: center;">
+        <RadzenText TextStyle="TextStyle.H3" TagName="TagName.H3" Class="my-4">
+            <strong>Users</strong>
+        </RadzenText>
+    </div>
+    <div style="display: flex">
+
+        <StargazerGrid PageSize="5"
+                       Style=""
+                       AllowSearch="true"
+                       AllowAdd="false"
+                       AllowCaching="true"
+                       GetSortableData="@LoadData">
+                                   <RadzenDataGridColumn TItem="UserPreviewResponseDto" Property="Id" Title="Id" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="UserPreviewResponseDto" Property="Title" Title="Title" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="UserPreviewResponseDto" Property="FirstName" Title="First name" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="UserPreviewResponseDto" Property="LastName" Title="Last name" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="UserPreviewResponseDto" Title="Picture" TextAlign="TextAlign.Center">
+                <Template Context="data">
+                    <RadzenImage Path="@data.Picture" class="rz-gravatar" />
+                </Template>
+            </RadzenDataGridColumn>
+
+        </StargazerGrid>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(selectedUserId))
+{
+    <UserPosts UserId="@selectedUserId"
+           UserName="@selectedUserName"
+           CachedData="@userPostsCachedData"
+           OnClose="@OnUserPostsDialogClose" />
+}
+
+@code {
+    private bool isLoading;
+    private int count;
+    private string selectedUserId;
+    private string selectedUserName;
+
+    private RadzenDataGrid<UserPreviewResponseDto> grid;
+
+    private UserPreviewResponseDto[] usersPreview;
+    private IList<UserPreviewResponseDto> selectedUserPreviews;
+    private UserPostsCachedData userPostsCachedData;
+
+    private Dictionary<int, CachedPage<UserPreviewResponseDto>> cachedUsers = new Dictionary<int, CachedPage<UserPreviewResponseDto>>();
+    private Dictionary<string, UserPostsCachedData> cachedPosts = new Dictionary<string, UserPostsCachedData>();
+
+    private async Task<PagedList<UserPreviewResponseDto>> LoadData(string query, int page, int pagesize, string sortDescriptor)
+    {
+        var items = await UserService.GetUserPreviewList(pagesize, page);
+
+        //var items = _cars.OrderBy(c => c.Name).Skip((pageNum - 1) * pageSize).Take(pageSize).ToList();
+        var sortedData = items.Data.OrderByDescending(u => u.Id).ToList();
+
+        return new PagedList<UserPreviewResponseDto>(sortedData, items.Total, page, pagesize);
+    }
+
+
+    //async Task LoadData(LoadDataArgs args)
+    //{
+    //    isLoading = true;
+
+    //    if (!cachedUsers.TryGetValue(grid.CurrentPage, out var page)
+    //        || page.ExpiryTime <= UnixTimeHelper.GetCurrentUnixTime())
+    //    {
+    //        cachedUsers.Remove(grid.CurrentPage);
+
+    //        var response =
+    //        count = response.Total;
+    //        page = new CachedPage<UserPreviewResponseDto>
+    //            {
+    //                Items = response.Data,
+    //                ExpiryTime = UnixTimeHelper.GetUnixTime(DateTime.Now.AddMinutes(5))
+    //            };
+
+    //        cachedUsers.Add(grid.CurrentPage, page);
+    //    }
+
+    //    usersPreview = page.Items;
+
+    //    isLoading = false;
+    //}
+
+    private void OnRowDoubleClicked(DataGridRowMouseEventArgs<UserPreviewResponseDto> args)
+    {
+        selectedUserId = args.Data.Id;
+        selectedUserName = $"{args.Data.FirstName} {args.Data.LastName}";
+
+        if (cachedPosts.TryGetValue(selectedUserId, out var cachedData))
+        {
+            userPostsCachedData = cachedData;
+        }
+        else
+        {
+            userPostsCachedData = new UserPostsCachedData();
+        }
+    }
+
+    private void OnUserPostsDialogClose(bool accepted)
+    {
+        if (!cachedPosts.TryGetValue(selectedUserId, out var _))
+        {
+            cachedPosts.Add(selectedUserId, userPostsCachedData);
+        }
+        selectedUserId = null;
+
+        StateHasChanged();
+    }
+}
