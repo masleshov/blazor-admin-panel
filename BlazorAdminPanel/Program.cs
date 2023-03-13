@@ -2,6 +2,7 @@ using BlazorAdminPanel.Configuration;
 using BlazorAdminPanel.Data;
 using BlazorAdminPanel.External;
 using Microsoft.Extensions.Http.Logging;
+using Stargazer.Web.UI.Utils;
 
 namespace BlazorAdminPanel
 {
@@ -16,6 +17,7 @@ namespace BlazorAdminPanel
             builder.Services.AddServerSideBlazor();
 
             builder.Services.AddScoped(sp => new LoggingHttpMessageHandler(sp.GetRequiredService<ILogger<LoggingHttpMessageHandler>>()));
+            builder.Services.AddScoped<BlazorServiceAccessor>();
 
             var authSection = builder.Configuration.GetSection("Auth");
             var authConfiguration = authSection.Get<AuthConfiguration>();

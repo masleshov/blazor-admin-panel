@@ -1,0 +1,79 @@
+@using Radzen;
+@typeparam TItem where TItem : class, new()
+
+
+
+@inherits StargazerGridBase<TItem>
+
+<div class="grid-container">
+    <div class="grid-control-panel">
+        @if(AllowSearch)
+        {
+            <RadzenButton ButtonStyle="ButtonStyle.Info" Icon="search" Text="@($"Search {EntityName}")" Click="@OnSearch" />
+            <RadzenTextBox @bind-Value="@_query" @onkeyup="@(async (args) => await OnKeyPress(args))"  Placeholder="@SearchPlaceholder" Style="width: 30vw; margin-left: 5px" />
+            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="clear" Style="margin-left: 5px" Click="@OnClearSearch" />
+        }
+        @if(AllowAdd)
+        {
+            <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle_outline" Style="margin-left: auto" Text="@($"Add New {EntityName}")" Click="@InsertRow" Disabled=@(_inserting != null || _updating != null) />
+        }
+    </div>
+
+    @if (AutoRefreshPeriod != null)
+    {
+        <RadzenProgressBar @ref="_autoUpdateBar" ProgressBarStyle="ProgressBarStyle.Info" @bind-Value="SumElapsedPercent" />
+    }
+
+    @if (!_isLoading)
+    {
+        
+        <RadzenDataGrid @ref="_grid" Data="@_items" LoadData=@LoadData
+        Count="@_count"
+        PageSize=@(PageSize?? 100)
+        TItem="TItem"
+        IsLoading="@_isLoading"
+        AllowPaging="true"
+        PagerPosition="PagerPosition.Bottom"
+        AllowSorting="true" 
+        AllowAlternatingRows="false"
+        AllowColumnResize="true"
+        SelectionMode="DataGridSelectionMode.Single"
+        @bind-Value="SelectedItems"
+        Style=@(Style?? "height: 100%")
+        EditMode="DataGridEditMode.Single"         
+        RowDoubleClick=@(async item => await OnRowDoubleClicked.InvokeAsync(item.Data))
+        RowSelect="@(async item => await OnRowSelected(item))"
+        RowDeselect="@(async item => await OnRowDeselected(item))"
+        CellContextMenu="CellContexMenu"  
+        Page=@OnPage
+        Sort=@(async args => await OnSort(args))                
+        RowCreate="@(async item => await OnCreateRow(item))"
+        RowUpdate="@(async item => await OnUpdateRow(item))"
+        RowRender="@(async item => await RenderRow(item))">   
+            @* ColumnWidth="150px" #Changed*@
+         @*AllowMultiColumnSorting="true" // We don't have it now *@
+            <Columns>
+                @if (AllowInline)
+                {
+                    <RadzenDataGridColumn Frozen="true" TItem="TItem" Context="item" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Width="156px">
+                        <Template Context="item">
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@(args => EditRow(item))" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" Class="my-1 ms-1" Click="@(args => DeleteRow(item))"  @onclick:stopPropagation="true">
+                            </RadzenButton>
+                        </Template>
+                        <EditTemplate Context="item">
+                            <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(item))">
+                            </RadzenButton>
+                            <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" Class="my-1 ms-1" Click="@((args) => CancelEdit(item))">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" Class="my-1 ms-1" Click="@(args => DeleteRow(item))">
+                            </RadzenButton>
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+                @ChildContent
+        </Columns>
+    </RadzenDataGrid>
+    }
+</div>
